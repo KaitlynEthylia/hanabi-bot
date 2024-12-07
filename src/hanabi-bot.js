@@ -85,6 +85,9 @@ async function main() {
 	if (args.manual)
 		Utils.globalModify({ manual: true });
 
+	if (args.wait)
+		Utils.globalModify({ wait: true });
+
 	ws.addEventListener('open', () => console.log('Established websocket connection!'));
 	ws.addEventListener('error', (event) => console.log('Websocket error:', event));
 	ws.addEventListener('close', (event) => console.log(`Websocket closed from server. ${event.code} ${event.reason}`));

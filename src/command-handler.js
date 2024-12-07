@@ -36,6 +36,22 @@ let gameStarted = false;
 /** @type {string} 	The user who last sent us a PM. */
 let last_sender;
 
+let doPerform = false;
+
+async function performAction(timeout = 0) {
+	const suggested_action = game.take_action(game);
+
+	if (game.in_progress) {
+		if (Utils.globals.manual === undefined)
+			setTimeout(async () => Utils.sendCmd('action', await suggested_action), timeout);
+	}
+	// Replaying a turn
+	else {
+		logger.highlight('cyan', 'Suggested action:', logPerformAction(await suggested_action));
+	}
+	doPerform = false
+}
+
 export const handle = {
 	/**
 	 * @param {ChatMessage} data
@@ -50,6 +66,9 @@ export const handle = {
 				assignSettings(data, false);
 			else if (data.msg.startsWith('/leaveall'))
 				leaveRoom();
+			else if (data.msg.startsWith('/go') && doPerform) {
+				performAction()
+			}
 
 			return;
 		}
@@ -160,21 +179,12 @@ export const handle = {
 		const { action } = data;
 		game.handle_action(action);
 
-		const perform = (action.type === 'turn' || (game.state.turn_count === 1 && action.type === 'draw')) &&
+		doPerform = (action.type === 'turn' || (game.state.turn_count === 1 && action.type === 'draw')) &&
 			game.state.currentPlayerIndex === game.state.ourPlayerIndex &&
 			!game.catchup;
 
-		if (perform) {
-			const suggested_action = game.take_action(game);
-
-			if (game.in_progress) {
-				if (Utils.globals.manual === undefined)
-					setTimeout(async () => Utils.sendCmd('action', await suggested_action), game.state.options.speedrun ? 0 : 2000);
-			}
-			// Replaying a turn
-			else {
-				logger.highlight('cyan', 'Suggested action:', logPerformAction(await suggested_action));
-			}
+		if (doPerform && !Utils.globals.wait) {
+			await performAction(game.state.options.speedrun ? 0 : 2000)
 		}
 	},
 	/**
